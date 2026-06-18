@@ -7,6 +7,7 @@ A lightweight Python-based web crawler that fetches a real-time weather summary 
 - **Google News Headlines:** Scrapes the top 5 entertainment headlines using `BeautifulSoup`.
 - **Smart Topic Filtering:** Implements an advanced keyword-based de-duplication mechanism to filter out overlapping articles and ensure 5 unique news topics.
 - **Email Notifications:** Automatically delivers the beautifully formatted daily briefing directly to your Gmail inbox via Python's `smtplib`.
+- **Automation Scheduler:** Runs seamlessly in the background and triggers the briefing automatically every day at a specific time using the `schedule` library.
 
 ## 🛠️ Tech Stack & Requirements
 - **Language:** Python 3.x
@@ -14,6 +15,7 @@ A lightweight Python-based web crawler that fetches a real-time weather summary 
   - `requests` (for handling HTTP requests)
   - `beautifulsoup4` (for parsing HTML content)
   - `smtplib` & `email` (Built-in Python libraries for secure email transmission)
+  - `schedule` (for automated time scheduling)
 
 ## 💻 How to Run
 1. Clone this repository to your local machine.
@@ -23,6 +25,3 @@ A lightweight Python-based web crawler that fetches a real-time weather summary 
 3. Run the web crawler script:
    ```bash
    python web_crawler.py
-
-## 💻 Future Roadmaps (Level-Up Features)
-[ ] **Automation Scheduler:** Automate the script to run daily at a specific time using the `schedule` library.

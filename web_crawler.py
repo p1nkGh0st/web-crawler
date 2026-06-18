@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import smtplib
 from email.mime.text import MIMEText
+import schedule  
+import time
 
 def get_weather():
     """Fetches real-time weather info for Los Angeles via wttr.in."""
@@ -123,15 +125,36 @@ def send_email_notification(content):
         print(f"❌ Failed to send email: {e}")
 
 
-if __name__ == "__main__":
-    print(f"=== ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M')} Briefing Started ===")
+def run_daily_briefing():
+    """The core run_daily_briefing that compiles data and sends the briefing email."""
+    print(f"\n=== ⏰ {datetime.now().strftime('%Y-%m-%d %H:%M')} Briefing Started ===")
     print("-" * 40)
-
+    
     # 1. Compile all fetched data into a single content block
     briefing_content = f"=== ⏰ Morning Briefing ===\n\n"
     briefing_content += get_weather()
     briefing_content += get_news_headlines()
     
-    # 2. Print to terminal (for verification) and shoot the email
+    # 2. Print to terminal and shoot the email
     print(briefing_content)
     send_email_notification(briefing_content)
+    print("=== 😴 run_daily_briefing Finished. Returning to standby mode ===")
+
+
+if __name__ == "__main__":
+    print("⚡ Daily Briefing Daemon Service is now running...")
+    print("🕒 Standing by for the scheduled time...")
+    
+    # 👈 Test Rule: Runs the run_daily_briefing immediately once upon starting to verify it works
+    run_daily_briefing()
+    
+    # Schedule Rule: Set it to run every single day at 08:30 AM
+    # (You can change "08:30" to any time you want to test, e.g., 2 minutes from now)
+    schedule.every().day.at("08:30").do(run_daily_briefing)
+    
+    # Infinite loop to keep the script alive and checking the clock
+    while True:
+        schedule.run_pending()  # Check if there is a scheduled run_daily_briefing to run
+        time.sleep(1)       # Sleep for 1 second to prevent high CPU usage
+
+   
