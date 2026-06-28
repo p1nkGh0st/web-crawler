@@ -4,94 +4,65 @@ Utility functions for scraping data, saving Excel reports, and sending discord n
 """
 
 import requests
-from bs4 import BeautifulSoup
 from datetime import datetime
 import csv
 import config
 
 
-def get_weather():
-    """Fetches real-time weather info for Los Angeles via wttr.in."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        "Accept-Language": "en-US,en;q=0.9",
-    }
-
+def get_crypto_prices_and_save():
+    """
+    Fetches real-time price data for BTC, ETH, and XRP via CoinGecko API,
+    appends the data into a cumulative CSV log, and returns a formatted report string.
+    """
     try:
-        response = requests.get(config.WEATHER_URL, headers=headers)
-        lines = response.text.split("\n")
-
-        weather_text = "N/A"
-        for line in lines:
-            if "Los Angeles:" in line:
-                weather_text = BeautifulSoup(line, "html.parser").get_text().strip()
-                break
-
-        weather_report = "☀️ Today's Weather Summary (Los Angeles)\n"
-        weather_report += f"- {weather_text}\n"
-        weather_report += "-" * 40 + "\n"
-        return weather_report
-    except Exception as e:
-        return f"❌ Error fetching weather data: {e}\n"
-
-
-def get_news_headlines_and_save():
-    """Fetches top 5 headlines and automatically saves them into a CSV file."""
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
-    }
-
-    try:
-        response = requests.get(config.NEWS_URL, headers=headers)
-        soup = BeautifulSoup(response.text, "html.parser")
-
-        raw_headlines = soup.find_all("a", attrs={"data-n-tid": True})
-        if not raw_headlines:
-            raw_headlines = [
-                a for a in soup.select("article a") if len(a.get_text(strip=True)) > 15
-            ]
-
-        news_report = "📰 Today's Google Entertainment Headlines\n"
-        unique_titles = []
-        seen_keywords = set()
-
-        for title in raw_headlines:
-            clean_title = title.get_text(strip=True)
-
-            if clean_title and clean_title not in unique_titles:
-                words = clean_title.lower().split()
-                keywords = {
-                    w
-                    for w in words
-                    if len(w) > 3 and w not in ["from", "with", "that", "this", "after"]
-                }
-
-                if keywords & seen_keywords:
-                    continue
-
-                unique_titles.append(clean_title)
-                seen_keywords.update(keywords)
-
-            if len(unique_titles) == 5:
-                break
-
-        # [1-Click Upgrade] Auto-save Google News to CSV
-        today_date = datetime.now().strftime("%Y%m%d_%H%M")
-        filename = f"google_news_{today_date}.csv"
-
-        with open(filename, mode="w", encoding="utf-8-sig", newline="") as f:
+        # 1. Fetch JSON data from CoinGecko API
+        response = requests.get(config.CRYPTO_URL)
+        data = response.json()  # Convert the fetched data into a Python dictionary immediately
+        
+        # 2. Parse the data
+        btc_price = data['bitcoin']['usd']
+        btc_change = data['bitcoin']['usd_24h_change']
+        
+        eth_price = data['ethereum']['usd']
+        eth_change = data['ethereum']['usd_24h_change']
+        
+        xrp_price = data['ripple']['usd']
+        xrp_change = data['ripple']['usd_24h_change']
+        
+        # 3. Build the report string
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
+        
+        report = f"🪙 **[Crypto Real-Time Market Report]** ({current_time})\n"
+        report += "-" * 40 + "\n"
+        report += f"• **Bitcoin (BTC):** ${btc_price:,} ({btc_change:+.2f}%)\n"
+        report += f"• **Ethereum (ETH):** ${eth_price:,} ({eth_change:+.2f}%)\n"
+        report += f"• **Ripple (XRP):** ${xrp_price:.4f} ({xrp_change:+.2f}%)\n"
+        report += "-" * 40 + "\n"
+        
+        # 4. Save to CSV log
+        filename = "crypto_price_history.csv"
+        
+        # Check if the file already exists to decide whether to write the header
+        import os
+        file_exists = os.path.isfile(filename)
+        
+        # Open in 'append' mode to store data cumulatively without overwriting
+        with open(filename, mode="a", encoding="utf-8-sig", newline="") as f:
             writer = csv.writer(f)
-            writer.writerow(["No.", "Headline"])
+            if not file_exists:
+                # Write the header only if the file is being created for the first time
+                writer.writerow(["Timestamp", "Coin", "Price (USD)", "24h Change (%)"])
+                
+            # Log data for each coin row by row
+            writer.writerow([current_time, "BTC", btc_price, f"{btc_change:.2f}"])
+            writer.writerow([current_time, "ETH", eth_price, f"{eth_change:.2f}"])
+            writer.writerow([current_time, "XRP", xrp_price, f"{xrp_change:.2f}"])
+            
+        print(f"💾 [SUCCESS] Market data successfully logged into: {filename}")
+        return report
 
-            for idx, title in enumerate(unique_titles, 1):
-                writer.writerow([idx, title])
-                news_report += f"{idx}. {title}\n"
-
-        print(f"💾 [SUCCESS] Excel report saved as: {filename}")
-        news_report += "-" * 40 + "\n"
-        return news_report
     except Exception as e:
-        return f"❌ Error fetching news headlines: {e}\n"
+        return f"❌ Error fetching crypto market data: {e}\n"
 
 
 def send_discord_notification(message):
