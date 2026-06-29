@@ -17,52 +17,67 @@ def get_crypto_prices_and_save():
     try:
         # 1. Fetch JSON data from CoinGecko API
         response = requests.get(config.CRYPTO_URL)
-        data = response.json()  # Convert the fetched data into a Python dictionary immediately
-        
+        response.raise_for_status()
+        data = (
+            response.json()
+        )  # Convert the fetched data into a Python dictionary immediately
+
         # 2. Parse the data
-        btc_price = data['bitcoin']['usd']
-        btc_change = data['bitcoin']['usd_24h_change']
-        
-        eth_price = data['ethereum']['usd']
-        eth_change = data['ethereum']['usd_24h_change']
-        
-        xrp_price = data['ripple']['usd']
-        xrp_change = data['ripple']['usd_24h_change']
-        
+        btc_price = data["bitcoin"]["usd"]
+        btc_change = data["bitcoin"]["usd_24h_change"]
+
+        eth_price = data["ethereum"]["usd"]
+        eth_change = data["ethereum"]["usd_24h_change"]
+
+        xrp_price = data["ripple"]["usd"]
+        xrp_change = data["ripple"]["usd_24h_change"]
+
+        # 데이터 딕셔너리 생성
+        market_data = {
+            "btc": {"price": btc_price, "change": btc_change},
+            "eth": {"price": eth_price, "change": eth_change},
+            "xrp": {"price": xrp_price, "change": xrp_change},
+        }
+
         # 3. Build the report string
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M')
-        
-        report = f"🪙 **[Crypto Real-Time Market Report]** ({current_time})\n"
-        report += "-" * 40 + "\n"
-        report += f"• **Bitcoin (BTC):** ${btc_price:,} ({btc_change:+.2f}%)\n"
-        report += f"• **Ethereum (ETH):** ${eth_price:,} ({eth_change:+.2f}%)\n"
-        report += f"• **Ripple (XRP):** ${xrp_price:.4f} ({xrp_change:+.2f}%)\n"
-        report += "-" * 40 + "\n"
-        
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M")
+
+        report = f"🪙 **[Crypto Real-Time Market Report]** ({current_time})  \n"
+        report += "-" * 40 + "  \n"
+        report += f"• **Bitcoin (BTC):** ${btc_price:,} ({btc_change:+.2f}%)  \n"
+        report += f"• **Ethereum (ETH):** ${eth_price:,} ({eth_change:+.2f}%)  \n"
+        report += f"• **Ripple (XRP):** ${xrp_price:.4f} ({xrp_change:+.2f}%)  \n"
+        report += "-" * 40 + "  \n"
+
         # 4. Save to CSV log
         filename = "crypto_price_history.csv"
-        
+
         # Check if the file already exists to decide whether to write the header
         import os
+
         file_exists = os.path.isfile(filename)
-        
+
         # Open in 'append' mode to store data cumulatively without overwriting
         with open(filename, mode="a", encoding="utf-8-sig", newline="") as f:
             writer = csv.writer(f)
             if not file_exists:
                 # Write the header only if the file is being created for the first time
                 writer.writerow(["Timestamp", "Coin", "Price (USD)", "24h Change (%)"])
-                
+
             # Log data for each coin row by row
             writer.writerow([current_time, "BTC", btc_price, f"{btc_change:.2f}"])
             writer.writerow([current_time, "ETH", eth_price, f"{eth_change:.2f}"])
             writer.writerow([current_time, "XRP", xrp_price, f"{xrp_change:.2f}"])
-            
-        print(f"💾 [SUCCESS] Market data successfully logged into: {filename}")
-        return report
 
+        print(f"💾 [SUCCESS] Market data successfully logged into: {filename}")
+        return (
+            market_data,
+            report,
+        )  # Return both the parsed market data and the formatted report string
     except Exception as e:
-        return f"❌ Error fetching crypto market data: {e}\n"
+        print(f"❌ [ERROR] Failed to fetch data: {e}")
+        # Return an empty dictionary and an error message to prevent type errors in calling code
+        return {}, f"❌ Error fetching crypto market data: {e}"
 
 
 def send_discord_notification(message):
